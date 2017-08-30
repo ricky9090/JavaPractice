@@ -1,4 +1,4 @@
-package test.net;
+package study.net;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;

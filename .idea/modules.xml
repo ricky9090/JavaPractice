@@ -2,9 +2,9 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/ricky.test.studyproject.iml" filepath="$PROJECT_DIR$/.idea/modules/ricky.test.studyproject.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/ricky.test.studyproject_main.iml" filepath="$PROJECT_DIR$/.idea/modules/ricky.test.studyproject_main.iml" group="ricky.test.studyproject" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/ricky.test.studyproject_test.iml" filepath="$PROJECT_DIR$/.idea/modules/ricky.test.studyproject_test.iml" group="ricky.test.studyproject" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/ricky.study.studyproject.iml" filepath="$PROJECT_DIR$/.idea/modules/ricky.study.studyproject.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/ricky.study.studyproject_main.iml" filepath="$PROJECT_DIR$/.idea/modules/ricky.study.studyproject_main.iml" group="ricky.study.studyproject" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/ricky.study.studyproject_test.iml" filepath="$PROJECT_DIR$/.idea/modules/ricky.study.studyproject_test.iml" group="ricky.study.studyproject" />
     </modules>
   </component>
 </project>

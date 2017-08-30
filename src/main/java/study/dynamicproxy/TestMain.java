@@ -1,4 +1,4 @@
-package test.dynamicproxy;
+package study.dynamicproxy;
 
 import java.lang.reflect.Proxy;
 

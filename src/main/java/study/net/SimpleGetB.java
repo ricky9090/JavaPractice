@@ -1,4 +1,4 @@
-package test.net;
+package study.net;
 
 /**
  * Created by rickyxe on 2017/8/29.

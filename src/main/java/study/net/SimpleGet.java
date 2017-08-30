@@ -1,4 +1,4 @@
-package test.net;
+package study.net;
 
 import okhttp3.*;
 
