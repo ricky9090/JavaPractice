@@ -10,9 +10,19 @@ import java.lang.reflect.Type;
  */
 public class MyClient {
 
-    public static <ENTITY> void handleEvent(MyCallback<ENTITY> callback) {
+    private static MyClient singleInstance = new MyClient();
+
+    public static MyClient getInstance() {
+        return singleInstance;
+    }
+
+    /**
+     * 处理接口类型的回调函数
+     * @param callback
+     * @param <ENTITY>
+     */
+    public <ENTITY> void handleEvent(MyCallback<ENTITY> callback) {
         Type[] interfaces = callback.getClass().getGenericInterfaces();
-        callback.getClass().getInterfaces();
         Type target = null;
 
         // 实际的对象可能实现了多个接口，需要从其中找到MyCallback
@@ -45,12 +55,52 @@ public class MyClient {
         }
     }
 
-    private static <ENTITY> void onSuccess(MyCallback<ENTITY> callback, ENTITY entity) {
+    private <ENTITY> void onSuccess(MyCallback<ENTITY> callback, ENTITY entity) {
         System.out.println("log success");
         callback.onSuccess(entity);
     }
 
-    private static <ENTITY> void onFailure(MyCallback<ENTITY> callback, String msg) {
+    private <ENTITY> void onFailure(MyCallback<ENTITY> callback, String msg) {
+        System.out.println("log failure");
+        callback.onFailure(msg);
+    }
+
+    // --------------------------------------------
+
+    /**
+     * 处理类形式的回调函数
+     * @param callback
+     * @param <ENTITY>
+     */
+    public <ENTITY> void handleEvent(MyAbstractCallback<ENTITY> callback) {
+        // 单继承，父类只有一个
+        Type superclass = callback.getClass().getGenericSuperclass();
+
+        // 如果实现类没有范型信息，直接返回
+        if (!(superclass instanceof ParameterizedTypeImpl)) {
+            return;
+        }
+
+        try {
+            // 找到声明的具体类型
+            ParameterizedType parameterized = (ParameterizedType) superclass;
+            Type actualType = parameterized.getActualTypeArguments()[0];
+
+            Object obj = Class.forName(actualType.getTypeName()).newInstance();
+            ENTITY result = (ENTITY) obj;
+            onSuccessB(callback, result);
+        } catch (Exception e) {
+            e.printStackTrace();
+            onFailureB(callback, e.getLocalizedMessage());
+        }
+    }
+
+    private <ENTITY> void onSuccessB(MyAbstractCallback<ENTITY> callback, ENTITY entity) {
+        System.out.println("log success");
+        callback.onSuccess(entity);
+    }
+
+    private <ENTITY> void onFailureB(MyAbstractCallback<ENTITY> callback, String msg) {
         System.out.println("log failure");
         callback.onFailure(msg);
     }

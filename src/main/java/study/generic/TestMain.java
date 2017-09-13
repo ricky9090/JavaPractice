@@ -26,9 +26,9 @@ public class TestMain {
 
     public static void main(String[] args) {
 
-        MyClient.handleEvent(new MyTestCallback());
+        MyClient.getInstance().handleEvent(new MyTestCallback());
 
-        MyClient.handleEvent(new MyCallback<String>() {
+        MyClient.getInstance().handleEvent(new MyCallback<String>() {
             @Override
             public void onSuccess(String s) {
                 System.out.println("String is: " + s);
@@ -36,6 +36,20 @@ public class TestMain {
 
             @Override
             public void onFailure(String errorMsg) {
+                System.out.println(errorMsg);
+            }
+        });
+
+        MyClient.getInstance().handleEvent(new AnotherCallback());
+
+        MyClient.getInstance().handleEvent(new MyAbstractCallback<String>() {
+            @Override
+            void onSuccess(String s) {
+                System.out.println("String is: " + s);
+            }
+
+            @Override
+            void onFailure(String errorMsg) {
                 System.out.println(errorMsg);
             }
         });
