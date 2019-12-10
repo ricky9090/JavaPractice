@@ -1,14 +1,33 @@
 package study.mystream;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 import java.util.function.BinaryOperator;
 import java.util.function.Function;
 
 /**
- * 模仿Stream API，研究Stream的执行流程
+ * 模仿Stream API，研究Stream的执行流程<p>
  * MyStream执行的打印顺序应与Java Stream一致
+ *
+ * <h2>思路</h2>
+ * 将Stream想象成从楼梯顶层往下的水流<p>
+ * 链式调用是从顶向下构建每一节台阶的过程，每个操作符是每层台阶的转换过程。<p>
+ * 当调用reduce方法后，每层仅在没有任何数据源的情况下，向上触发获取数据，就像水流往下流动。<p>
+ * 在当前层仍有数据的情况下，则直接向下层发送剩余事件。<p>
+ * 当最底层reduce操作拿不到任何数据时，即所有层都没有数据源了，跳出循环返回reduce结果。<p>
+ *
+ * <pre>
+ *  A,B,C ->
+ *          ---+
+ *        OP 1 |           <--  (map)
+ *             +---+
+ *            OP 2 |       <--  (flatMap)
+ *                 +---+
+ *                OP 3 |   <--  (map)
+ *                     +---
+ *                         -> Reduce
+ * </pre>
  */
 public class MyStream<T> implements Up {
 
@@ -18,39 +37,17 @@ public class MyStream<T> implements Up {
     MyStream next = null;
 
     Up up = null;
-    boolean noMore = false;
-
-    public void onEventOver(boolean over) {
-        this.noMore = over;
-    }
 
     @Override
     public void trigger() {
-        if (up != null) {
-            // 触发上层数据源
+        if (up != null && sourceList.size() == 0) {
+            // 不是顶层，且当前没有数据了，触发上游下发数据
+            // 若是顶层，或当前层仍有数据，那么不触发上游，仍从本层拿数据给下游
             up.trigger();
         }
 
-        // 捕获上层传递数据
+        // 捕获上游传递的数据
         T item = capture();
-
-        // 检查后续是否还有数据，提前通知下层
-        if (up == null) {
-            // 最顶层数据源
-            if (sourceList.size() > 0) {
-                // 有数据
-                noMore = false;
-                if (next != null) {
-                    next.onEventOver(this.noMore);
-                }
-            } else {
-                // 没有数据了，提示下层不再trigger
-                noMore = true;
-                if (next != null) {
-                    next.onEventOver(this.noMore);
-                }
-            }
-        }
 
         // 通过转换，将数据递给下层
         drop(item);
@@ -68,9 +65,14 @@ public class MyStream<T> implements Up {
     private void drop(T source) {
         if (op != null && source != null) {
             next.sourceList.clear();
-            next.sourceList.add(op.apply(source));
+            Object opResult = op.apply(source);
+            if (opResult instanceof MyStream) {
+                // 执行结果为 MyStream 类型，即 flatmap 操作，将转换后数据源打包给下游
+                next.sourceList.addAll(((MyStream) opResult).sourceList);
+            } else {
+                next.sourceList.add(opResult);
+            }
         }
-        next.onEventOver(this.noMore);
     }
 
     public <R> MyStream<R> map(Function<T, R> mapper) {
@@ -81,14 +83,17 @@ public class MyStream<T> implements Up {
         return nextStream;
     }
 
-    /*public <R> MyStream<R> flatMap(Function<T, MyStream<R>> flatMapper) {
-        // TODO
-        return new MyStream<>();
-    }*/
+    public <R> MyStream<R> flatMap(Function<T, MyStream<R>> flatMapper) {
+        this.op = flatMapper;
+        MyStream<R> nextStream = new MyStream<>();
+        nextStream.up = this;
+        this.next = nextStream;
+        return nextStream;
+    }
 
     public T reduce(BinaryOperator<T> binaryOperator) {
         List<T> reduceList = new ArrayList<>();
-        while (!noMore) {
+        while (true) {
             if (up != null) {
                 up.trigger();
             }
@@ -96,9 +101,13 @@ public class MyStream<T> implements Up {
             if (sourceList.size() > 0) {
                 reduceList.add(sourceList.get(0));
                 sourceList.clear();
+            } else {
+                // 通过 Trigger 拿不到更多数据，说明上游已经没有数据，退出循环
+                break;
             }
 
             if (reduceList.size() == 2) {
+                // reduce 序列达到两个元素，进行reduce操作
                 T reduceResult = binaryOperator.apply(reduceList.get(0), reduceList.get(1));
                 reduceList.clear();
                 reduceList.add(reduceResult);
@@ -117,56 +126,11 @@ public class MyStream<T> implements Up {
         return stream;
     }
 
-    public static void main(String[] args) {
-        List<String> test = new ArrayList<>();
-        test.add("red"); //3
-        test.add("blue"); //4
-        test.add("green"); //5
-
-        Optional<Integer> result = test.stream().map(new Function<String, String>() {
-            @Override
-            public String apply(String s) {
-                System.out.println("map String uppercase: " + s);
-                return s.toUpperCase();
-            }
-        }).map(new Function<String, Integer>() {
-            @Override
-            public Integer apply(String s) {
-                System.out.println("map String to length: " + s);
-                return s.length();
-            }
-        }).reduce(new BinaryOperator<Integer>() {
-            @Override
-            public Integer apply(Integer integer, Integer integer2) {
-                System.out.println("reduce: " + integer + ", " + integer2);
-                return integer + integer2;
-            }
-        });
-        System.out.println(result.get());
-
-
-
-        MyStream<String> testStream = MyStream.of(test);
-
-        Integer testResult = testStream.map(new Function<String, String>() {
-            @Override
-            public String apply(String s) {
-                System.out.println("map String uppercase: " + s);
-                return s.toUpperCase();
-            }
-        }).map(new Function<String, Integer>() {
-            @Override
-            public Integer apply(String s) {
-                System.out.println("map String to length: " + s);
-                return s.length();
-            }
-        }).reduce(new BinaryOperator<Integer>() {
-            @Override
-            public Integer apply(Integer integer, Integer integer2) {
-                System.out.println("reduce: " + integer + ", " + integer2);
-                return integer + integer2;
-            }
-        });
-        System.out.println(testResult);
+    public static <S> MyStream<S> of(S[] input) {
+        MyStream<S> stream = new MyStream<>();
+        Collections.addAll(stream.sourceList, input);
+        return stream;
     }
+
+
 }
